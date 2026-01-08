@@ -29,10 +29,109 @@ When `fast-hash` is in `PATH`, Go hashing will automatically use it.
 ./iron-sentinel triage --output ./evidence
 ```
 
+Example stdout:
+
+```text
+case=3f6e2d2c-5b2f-4a4c-a0fe-8c8a0c3c1a2b output=./evidence/3f6e2d2c-5b2f-4a4c-a0fe-8c8a0c3c1a2b artifacts=8
+```
+
+Example evidence layout (paths will vary based on what collectors succeed on the host):
+
+```text
+evidence/<CASE_ID>/
+  manifest.json
+  analysis/
+    timeline.jsonl
+    ioc_scan.json                (only if --ioc-file is used)
+  system/
+    host_info.json
+    os-release.txt
+  proc/
+    meminfo
+    cpuinfo
+    uptime
+    loadavg
+    version
+  network/
+    ss_tulpen.txt                (or netstat/ip/ifconfig)
+  sessions/
+    who_a.txt
+    w.txt
+    users.txt
+    last_50.txt
+  persistence/
+    crontab
+    cron.d_listing.txt
+    system_listing.txt
+  snapshot/
+    metadata.jsonl               (only if snapshot enabled)
+    files.tar.gz                 (only in snapshot copy mode)
+  errors/
+    <collector>.txt              (only if a collector errors)
+```
+
+Example `manifest.json` snippet:
+
+```json
+{
+  "case_id": "<CASE_ID>",
+  "created_at": "2026-01-08T08:30:00Z",
+  "artifacts": [
+    {
+      "relative_path": "system/os-release.txt",
+      "collector": "os_release",
+      "collected_at": "2026-01-08T08:30:01Z",
+      "size_bytes": 1234,
+      "sha256": "<sha256>"
+    },
+    {
+      "relative_path": "analysis/timeline.jsonl",
+      "collector": "timeline",
+      "collected_at": "2026-01-08T08:30:02Z",
+      "size_bytes": 4567,
+      "sha256": "<sha256>"
+    }
+  ]
+}
+```
+
+Example `analysis/timeline.jsonl` snippet:
+
+```jsonl
+{"time":"2026-01-08T08:30:00Z","type":"triage_started","metadata":{"case_id":"<CASE_ID>"}}
+{"time":"2026-01-08T08:30:01Z","type":"artifact_collected","artifact":"system/os-release.txt","collector":"os_release","sha256":"<sha256>","size_bytes":1234}
+{"time":"2026-01-08T08:30:02Z","type":"triage_finished","metadata":{"case_id":"<CASE_ID>","artifacts":"8"}}
+```
+
 IOC scan:
 
 ```bash
 ./iron-sentinel triage --output ./evidence --ioc-file ./iocs.txt
+```
+
+Example IOC file (`iocs.txt`):
+
+```text
+suspicious-domain.com
+malware.exe
+```
+
+Example `analysis/ioc_scan.json` snippet:
+
+```json
+{
+  "ioc_file": "./iocs.txt",
+  "matches": [
+    {
+      "pattern": "malware.exe",
+      "artifact": "proc/ps_aux.txt",
+      "first_line": "...",
+      "collected_at": "2026-01-08T08:30:02Z"
+    }
+  ],
+  "scanned": 8,
+  "finished": "2026-01-08T08:30:02Z"
+}
 ```
 
 ## Filesystem snapshot
